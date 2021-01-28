@@ -6,33 +6,34 @@
  *
  * Device driver node to fake loopback joints.
  */
-#include "ros/ros.h"
 #include "controller_manager/controller_manager.h"
 #include "fake_joint_driver/fake_joint_driver.h"
+#include "ros/ros.h"
 
 /**
  * @brief Main function
  */
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   // Init ROS node
   ros::init(argc, argv, "fake_joint_driver");
   ros::NodeHandle nh;
-
+  ros::NodeHandle pnh("~");
+  // Get control period
+  double control_period;
+  pnh.param<double>("control_period", control_period, 0.01);
   // Create hardware interface
   FakeJointDriver robot;
   // Connect to controller manager
   controller_manager::ControllerManager cm(&robot, nh);
 
-  // Set spin ratge
-  ros::Rate rate(1.0 / ros::Duration(0.010).toSec());
+  // Set spin rate
+  ros::Rate rate(1.0 / ros::Duration(control_period).toSec());
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
-  while (ros::ok())
-  {
-    robot.update();
-    cm.update(ros::Time::now(), ros::Duration(0.010));
+  while (ros::ok()) {
+    robot.update(ros::Duration(control_period));
+    cm.update(ros::Time::now(), ros::Duration(control_period));
     rate.sleep();
   }
   spinner.stop();

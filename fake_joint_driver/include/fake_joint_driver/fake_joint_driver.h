@@ -11,17 +11,20 @@
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/robot_hw.h>
 
-class FakeJointDriver : public hardware_interface::RobotHW
-{
+class FakeJointDriver : public hardware_interface::RobotHW {
 private:
-  hardware_interface::JointStateInterface joint_state_interface;
-  hardware_interface::PositionJointInterface position_joint_interface;
-  hardware_interface::VelocityJointInterface velocity_joint_interface;
+  hardware_interface::JointStateInterface joint_state_interface_;
+  hardware_interface::PositionJointInterface position_joint_interface_;
+  hardware_interface::VelocityJointInterface velocity_joint_interface_;
 
-  std::vector<double> cmd_dis;
-  std::vector<double> act_dis;
-  std::vector<double> act_vel;
-  std::vector<double> act_eff;
+  std::vector<double> cmd_dis_;
+  // If there is not a change between successive position commands, assume
+  // velocity control, store last position command in cmd_dis_old_
+  std::vector<double> cmd_dis_old_;
+  std::vector<double> cmd_vel_;
+  std::vector<double> act_dis_;
+  std::vector<double> act_vel_;
+  std::vector<double> act_eff_;
 
   std::vector<std::string> joint_names_;
   bool use_description_;
@@ -30,6 +33,6 @@ private:
 
 public:
   FakeJointDriver(void);
-  ~FakeJointDriver();
   void update(void);
+  void update(ros::Duration period);
 };
