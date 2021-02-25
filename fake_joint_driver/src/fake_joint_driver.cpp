@@ -117,31 +117,24 @@ FakeJointDriver::FakeJointDriver(void) {
  */
 void FakeJointDriver::update(ros::Duration period) {
 
-  // check if non zero velocity command is sent
-  double vel_sum = 0.0;
-  std::for_each(cmd_vel_.begin(), cmd_vel_.end(),
-                [&vel_sum](double a) { return vel_sum += std::abs(a); });
-
-  // if velocity commands are zero - use position interface
-  if (vel_sum == 0.0) {
-    // TODO enforce position and velocity limits
-    // only do loopback
-    act_dis_ = cmd_dis_;
-    std::fill(cmd_vel_.begin(), cmd_vel_.end(), 0.0);
-    act_vel_ = cmd_vel_;
-  } else {
-    // TODO enforce position, velocity and acceleration limits
-    // if there is non zero velocity commands - use velocity interface
-    act_vel_ = cmd_vel_;
-    // create a lambda integration functor
-    std::function<double(double, double)> integrator =
-        [&period](double a, double b) { return a + b * period.toSec(); };
-    // integrate position
-    std::transform(act_dis_.begin(), act_dis_.end(), cmd_vel_.begin(),
-                   act_dis_.begin(), integrator);
-    // if velocity commands are not used in the next control loop iteration make
-    // sure first position command is actual state of joints
-    cmd_dis_ = act_dis_;
+  for (int i = 0; i < joint_names_.size(); ++i) {
+    // if velocity commands are zero - use position interface
+    if (cmd_vel_[i] == 0.0) {
+      // only do loopback
+      act_dis_[i] = cmd_dis_[i];
+      // velocity as 1st derivative of commanded position
+      act_vel_[i] = (cmd_dis_[i] - cmd_dis_old_[i]) / period.toSec();
+    } else {
+      // if there is non zero velocity commands - use velocity interface
+      act_vel_[i] = cmd_vel_[i];
+      // integrate position
+      act_dis_[i] += cmd_vel_[i] * period.toSec();
+      // if velocity commands are not used in the next control loop iteration
+      // make sure first position command is actual state of joints
+      cmd_dis_[i] = act_dis_[i];
+    }
+    // remember last position command/state
+    cmd_dis_old_[i] = cmd_dis_[i];
   }
 }
 
